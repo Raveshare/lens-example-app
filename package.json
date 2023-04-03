@@ -11,7 +11,10 @@
   "dependencies": {
     "@apollo/client": "^3.7.1",
     "@rainbow-me/rainbowkit": "^0.7.4",
+    "alchemy-sdk": "^2.4.3",
+    "dotenv": "^16.0.3",
     "ethers": "^5.7.2",
+    "fs": "^0.0.1-security",
     "graphql": "^16.6.0",
     "ipfs-http-client": "^59.0.0",
     "next": "13.0.0",
