@@ -63,10 +63,12 @@ export default function Home() {
       setAddress(accounts[0]);
       const response = await client.query({
         query: getDefaultProfile,
-        variables: { address: accounts[0] },
+        variables: { for: accounts[0] },
       });
-      setProfileId(response.data.defaultProfile.id);
-      setHandle(response.data.defaultProfile.handle);
+
+      // TODO: handle multiple profiles
+      setProfileId(response.data.profilesManaged.items[0].id);
+      setHandle(response.data.profilesManaged.items[0].handle);
     }
   }
 
@@ -88,7 +90,8 @@ export default function Home() {
       const challengeInfo = await client.query({
         query: challenge,
         variables: {
-          address,
+          "signedBy" : address,
+          "for" : profileId,
         },
       });
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -96,6 +99,8 @@ export default function Home() {
       const signature = await signer.signMessage(
         challengeInfo.data.challenge.text
       );
+      console.log(challengeInfo.data.challenge.id)
+      console.log(signature)
       const authData = await client.mutate({
         mutation: authenticate,
         variables: {
