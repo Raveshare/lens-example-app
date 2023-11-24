@@ -90,8 +90,8 @@ export default function Home() {
       const challengeInfo = await client.query({
         query: challenge,
         variables: {
-          "signedBy" : address,
-          "for" : profileId,
+          signedBy: address,
+          for: profileId,
         },
       });
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -99,12 +99,12 @@ export default function Home() {
       const signature = await signer.signMessage(
         challengeInfo.data.challenge.text
       );
-      console.log(challengeInfo.data.challenge.id)
-      console.log(signature)
+      console.log(challengeInfo.data.challenge.id);
+      console.log(signature);
       const authData = await client.mutate({
         mutation: authenticate,
         variables: {
-          address,
+          id: challengeInfo.data.challenge.id,
           signature,
         },
       });

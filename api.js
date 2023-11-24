@@ -102,8 +102,8 @@ export const challenge = gql`
 `;
 
 export const authenticate = gql`
-  mutation Authenticate($address: EthereumAddress!, $signature: Signature!) {
-    authenticate(request: { address: $address, signature: $signature }) {
+  mutation Authenticate($id: ChallengeId!, $signature: Signature!) {
+    authenticate(request: { id: $id, signature: $signature }) {
       accessToken
       refreshToken
     }
@@ -115,7 +115,9 @@ export const getDefaultProfile = gql`
     profilesManaged(request: { for: $for }) {
       items {
         id
-        handle
+        handle {
+          fullHandle
+        }
         metadata {
           displayName
           picture {
@@ -194,5 +196,5 @@ export const signCreatePostTypedData = async (request, token) => {
     typedData.types,
     typedData.value
   );
-  return { result, signature };
+  return {result, signature };
 };
