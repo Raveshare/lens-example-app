@@ -9,6 +9,7 @@ import { setContext } from "@apollo/client/link/context";
 import omitDeep from "omit-deep";
 import LENS_HUB_ABI from "./ABI.json";
 
+export const OPEN_ACTION_MODULE_ADDRESS = "0x0C3C4E1823C1E8121013Bf43A83fBEF2858F463e"
 export const LENS_HUB_CONTRACT = "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d";
 export const lensHub = new ethers.Contract(
   LENS_HUB_CONTRACT,
@@ -161,6 +162,66 @@ export const validateMetadata = gql`
   }
 `;
 
+export const getPublicationQuery = gql`
+  query Publications($request: PublicationsRequest!) {
+    publications(request: $request) {
+      items {
+        ... on Post {
+          openActionModules {
+            ... on UnknownOpenActionModuleSettings {
+              openActionModuleReturnData
+              type
+              contract {
+                address
+                chainId
+              }
+            }
+          }
+          id
+          metadata {
+            ... on VideoMetadataV3 {
+              appId
+              content
+            }
+          }
+          by {
+            id
+          }
+          publishedOn {
+            id
+          }
+          txHash
+        }
+      }
+    }
+  }
+`;
+
+export  const getPublication = async (from) => {
+
+
+  let req = {
+    "request": {
+      "where": {
+        "from": from,
+        "withOpenActions": [
+          {
+            "address": OPEN_ACTION_MODULE_ADDRESS,
+          }
+        ]
+      }
+    }
+  }
+
+  let res = await client.query({
+    query: getPublicationQuery,
+    variables: req
+  });
+
+  console.log(res.data.publications.items);
+  return res?.data?.publications.items || [];
+};
+
 /* helper functions */
 function getSigner() {
   if (typeof window !== "undefined") {
@@ -196,5 +257,5 @@ export const signCreatePostTypedData = async (request, token) => {
     typedData.types,
     typedData.value
   );
-  return {result, signature };
+  return { result, signature };
 };

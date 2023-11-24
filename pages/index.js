@@ -10,6 +10,7 @@ import {
   splitSignature,
   validateMetadata,
   setFollowNftUri,
+  getPublication,
 } from "../api";
 
 import { create } from "ipfs-http-client";
@@ -23,8 +24,6 @@ const auth =
 import { Network, Alchemy } from "alchemy-sdk";
 
 let ALCHEMY_API_KEY = "KtgRSgBcz80P1wN4X_e9-s6NVw58gXtX";
-
-console.log("process.env.ALCHEMY_API_KEY", ALCHEMY_API_KEY);
 
 const settings = {
   apiKey: ALCHEMY_API_KEY,
@@ -51,6 +50,7 @@ export default function Home() {
   const [handle, setHandle] = useState("");
   const [token, setToken] = useState("");
   const [ownedNFT, setOwnedNFT] = useState("");
+  const [publications, setPublications] = useState([]);
 
   useEffect(() => {
     checkConnection();
@@ -117,7 +117,10 @@ export default function Home() {
       localStorage.setItem("lens-auth-token", accessToken);
       setToken(accessToken);
       setSession(authData.data.authenticate);
-      getNFTOwnedByAddress();
+
+      // getPublication(profileId);
+      setPublications(await getPublication(profileId));
+      // getNFTOwnedByAddress();
     } catch (err) {
       console.log("Error signing in: ", err);
     }
@@ -254,6 +257,26 @@ export default function Home() {
         <div>
           <input type="file" onChange={onFollowNFTChange} />
           <button onClick={setFollowNftUri}>Create Follow NFT</button>
+        </div>
+      )}
+      {/* {address && session } */}
+      {address && session && (
+        <div>
+          <h1>Publications</h1>
+          {publications.map((p) => (
+            <div key={p.id}>
+              <p>---------------------</p>
+              <h4>{p.id}</h4>
+              <p>{p.publishedOn.id}</p>
+              <a
+                href={`https://mumbai.polygonscan.com/address/${p.openActionModules[0].contract.address}`}
+              >
+                <p>{p.openActionModules[0].contract.address}</p>
+              </a>
+              <p>act on</p>
+              <p>---------------------</p>
+            </div>
+          ))}
         </div>
       )}
     </div>
