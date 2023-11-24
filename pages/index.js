@@ -11,6 +11,8 @@ import {
   validateMetadata,
   setFollowNftUri,
   getPublication,
+  actOnOpenAction,
+  broadcastOnchain
 } from "../api";
 
 import { create } from "ipfs-http-client";
@@ -184,6 +186,18 @@ export default function Home() {
     return added;
   }
 
+  async function actOn(id, address, data, token) {
+    console.log(id, address, data, token);
+    // id = id.split("-")[1];
+
+    let signedResult = await actOnOpenAction(id, address, data, token);
+
+    let tx = await broadcastOnchain(signedResult.signature,signedResult.id)
+
+    console.log(tx);
+
+  }
+
   async function uploadToIPFS() {
     let videoURL = await uploadMediaToIPFS();
 
@@ -273,7 +287,18 @@ export default function Home() {
               >
                 <p>{p.openActionModules[0].contract.address}</p>
               </a>
-              <p>act on</p>
+              <button
+                onClick={() =>
+                  actOn(
+                    p.id,
+                    p.openActionModules[0].contract.address,
+                    p.openActionModules[0].openActionModuleReturnData,
+                    token
+                  )
+                }
+              >
+                act on
+              </button>
               <p>---------------------</p>
             </div>
           ))}

@@ -9,7 +9,8 @@ import { setContext } from "@apollo/client/link/context";
 import omitDeep from "omit-deep";
 import LENS_HUB_ABI from "./ABI.json";
 
-export const OPEN_ACTION_MODULE_ADDRESS = "0x0C3C4E1823C1E8121013Bf43A83fBEF2858F463e"
+export const OPEN_ACTION_MODULE_ADDRESS =
+  "0x0C3C4E1823C1E8121013Bf43A83fBEF2858F463e";
 export const LENS_HUB_CONTRACT = "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d";
 export const lensHub = new ethers.Contract(
   LENS_HUB_CONTRACT,
@@ -197,30 +198,192 @@ export const getPublicationQuery = gql`
   }
 `;
 
-export  const getPublication = async (from) => {
-
-
+export const getPublication = async (from) => {
   let req = {
-    "request": {
-      "where": {
-        "from": from,
-        "withOpenActions": [
+    request: {
+      where: {
+        from: from,
+        withOpenActions: [
           {
-            "address": OPEN_ACTION_MODULE_ADDRESS,
-          }
-        ]
-      }
-    }
-  }
+            address: OPEN_ACTION_MODULE_ADDRESS,
+          },
+        ],
+      },
+    },
+  };
 
   let res = await client.query({
     query: getPublicationQuery,
-    variables: req
+    variables: req,
   });
 
-  console.log(res.data.publications.items);
   return res?.data?.publications.items || [];
 };
+
+export const CreateActOnOpenActionTypedData = gql`
+  mutation CreateActOnOpenActionTypedData($request: ActOnOpenActionRequest!) {
+    createActOnOpenActionTypedData(request: $request) {
+      id
+      expiresAt
+      typedData {
+        types {
+          Act {
+            name
+            type
+          }
+        }
+        domain {
+          name
+          chainId
+          version
+          verifyingContract
+        }
+        value {
+          nonce
+          deadline
+          publicationActedProfileId
+          publicationActedId
+          actorProfileId
+          referrerProfileIds
+          referrerPubIds
+          actionModuleAddress
+          actionModuleData
+        }
+      }
+    }
+  }
+`;
+
+export const actOnOpenAction = async (
+  publicationId,
+  address,
+  data,
+  accessToken
+) => {
+  let req = {
+    for: publicationId,
+    actOn: {
+      unknownOpenAction: {
+        address: address,
+        data: data,
+      },
+    },
+  };
+
+  let res = await client.mutate({
+    mutation: CreateActOnOpenActionTypedData,
+    variables: {
+      request: req,
+    },
+    context: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  });
+
+  let createActOnOpenActionTypeResponseData =
+    res?.data?.createActOnOpenActionTypedData;
+
+  const typedData = createActOnOpenActionTypeResponseData.typedData;
+  const id = createActOnOpenActionTypeResponseData.id;
+
+  const signer = getSigner();
+  const allow = signer.sendTransaction({
+    "to" : "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+    "data" : "0x095ea7b30000000000000000000000000c3c4e1823c1e8121013bf43a83fbef2858f463e0000000000000000000000000000000000000000000000015af1d78b58c40000"
+  })
+
+  const signature = await signedTypeData(
+    typedData.domain,
+    typedData.types,
+    typedData.value
+  );
+
+  return { id, signature };
+};
+
+const BroadcastOnchainMutation = gql`
+  mutation BroadcastOnchain($request: BroadcastRequest!) {
+    broadcastOnchain(request: $request) {
+      ... on RelaySuccess {
+        txHash
+        txId
+      }
+      ... on RelayError {
+        reason
+      }
+    }
+  }
+`;
+
+export const broadcastOnchain = async (signature, id) => {
+  let request = {
+    signature: signature,
+    id: id,
+  };
+
+  let res = await client.mutate({
+    mutation: BroadcastOnchainMutation,
+    variables: {
+      request: request,
+    },
+  });
+
+  console.log(res?.data?.broadcastOnchain);
+  return res?.data?.broadcastOnchain;
+};
+
+export const ApprovedModuleAllowanceAmountQuery = gql`
+  query ApprovedModuleAllowanceAmount(
+    $request: ApprovedModuleAllowanceAmountRequest!
+  ) {
+    approvedModuleAllowanceAmount(request: $request) {
+      moduleName
+      moduleContract {
+        address
+        chainId
+      }
+      allowance {
+        asset {
+          ... on Erc20 {
+            name
+            symbol
+            decimals
+            contract {
+              address
+              chainId
+            }
+          }
+        }
+        value
+      }
+    }
+  }
+`;
+
+export const getApprovedModuleAllowanceAmount = async (token) => {
+  let request = {
+    "currencies": ["0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"],
+    "unknownOpenActionModules": ["0x0C3C4E1823C1E8121013Bf43A83fBEF2858F463e"],
+  }
+
+  let res = await client.query({
+
+    query: ApprovedModuleAllowanceAmountQuery,
+    variables: {
+      request: request,
+    },
+    context: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+
+  console.log(res?.data?.approvedModuleAllowanceAmount);
+  return res?.data?.approvedModuleAllowanceAmount;
+}
 
 /* helper functions */
 function getSigner() {
