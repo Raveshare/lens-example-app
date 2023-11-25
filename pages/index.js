@@ -12,7 +12,7 @@ import {
   setFollowNftUri,
   getPublication,
   actOnOpenAction,
-  broadcastOnchain
+  broadcastOnchain,
 } from "../api";
 
 import { create } from "ipfs-http-client";
@@ -192,10 +192,9 @@ export default function Home() {
 
     let signedResult = await actOnOpenAction(id, address, data, token);
 
-    let tx = await broadcastOnchain(signedResult.signature,signedResult.id)
+    let tx = await broadcastOnchain(signedResult.signature, signedResult.id);
 
     console.log(tx);
-
   }
 
   async function uploadToIPFS() {
@@ -292,7 +291,7 @@ export default function Home() {
                   actOn(
                     p.id,
                     p.openActionModules[0].contract.address,
-                    p.openActionModules[0].openActionModuleReturnData,
+                    "0x0000000000000000000000009c3c9283d3e44854697cd22d3faa240cfb032889",
                     token
                   )
                 }

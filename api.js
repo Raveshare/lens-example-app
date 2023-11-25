@@ -8,6 +8,7 @@ import { utils, ethers } from "ethers";
 import { setContext } from "@apollo/client/link/context";
 import omitDeep from "omit-deep";
 import LENS_HUB_ABI from "./ABI.json";
+import PublicActProxyAbi from "./PublicActProxyAbi.json";
 
 export const OPEN_ACTION_MODULE_ADDRESS =
   "0x0C3C4E1823C1E8121013Bf43A83fBEF2858F463e";
@@ -289,16 +290,50 @@ export const actOnOpenAction = async (
   const id = createActOnOpenActionTypeResponseData.id;
 
   const signer = getSigner();
+  
   const allow = signer.sendTransaction({
-    "to" : "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
-    "data" : "0x095ea7b30000000000000000000000000c3c4e1823c1e8121013bf43a83fbef2858f463e0000000000000000000000000000000000000000000000015af1d78b58c40000"
-  })
+    to: "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+    data: "0x095ea7b30000000000000000000000000c3c4e1823c1e8121013bf43a83fbef2858f463e0000000000000000000000000000000000000000000000015af1d78b58c40000",
+  });
 
   const signature = await signedTypeData(
     typedData.domain,
     typedData.types,
     typedData.value
   );
+
+  const publicActProxy = new ethers.Contract(
+    "0xab5607f5447d538fc79bb32364ddecd8f76d7ee8",
+    PublicActProxyAbi,
+    signer
+  );
+
+  console.log(await signer.getAddress())
+  let address1 = await signer.getAddress();
+
+  const { v, r, s } = ethers.utils.splitSignature(signature);
+
+  const tx = await publicActProxy.publicCollectWithSig(
+    {
+      publicationActedProfileId: typedData.value.publicationActedProfileId,
+      publicationActedId: typedData.value.publicationActedId,
+      actorProfileId: typedData.value.actorProfileId,
+      referrerProfileIds: typedData.value.referrerProfileIds,
+      referrerPubIds: typedData.value.referrerPubIds,
+      actionModuleAddress: typedData.value.actionModuleAddress,
+      actionModuleData: typedData.value.actionModuleData,
+    },
+    {
+      signer: address1,
+      v,
+      r,
+      s,
+      deadline: typedData.value.deadline,
+      gasLimit: 1000000,
+    }
+  );
+
+  console.log(tx);
 
   return { id, signature };
 };
@@ -364,12 +399,11 @@ export const ApprovedModuleAllowanceAmountQuery = gql`
 
 export const getApprovedModuleAllowanceAmount = async (token) => {
   let request = {
-    "currencies": ["0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"],
-    "unknownOpenActionModules": ["0x0C3C4E1823C1E8121013Bf43A83fBEF2858F463e"],
-  }
+    currencies: ["0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"],
+    unknownOpenActionModules: ["0x0C3C4E1823C1E8121013Bf43A83fBEF2858F463e"],
+  };
 
   let res = await client.query({
-
     query: ApprovedModuleAllowanceAmountQuery,
     variables: {
       request: request,
@@ -383,7 +417,50 @@ export const getApprovedModuleAllowanceAmount = async (token) => {
 
   console.log(res?.data?.approvedModuleAllowanceAmount);
   return res?.data?.approvedModuleAllowanceAmount;
-}
+};
+
+export const GenerateModuleCurrencyApprovalData = gql`
+  query GenerateModuleCurrencyApprovalData(
+    $request: GenerateModuleCurrencyApprovalDataRequest!
+  ) {
+    generateModuleCurrencyApprovalData(request: $request) {
+      to
+      from
+      data
+    }
+  }
+`;
+
+export const generateModuleCurrencyApprovalData = async (
+  token,
+  currency,
+  amount
+) => {
+  let request = {
+    allowance: {
+      currency: currency,
+      value: amount,
+    },
+    module: {
+      unknownOpenActionModule: OPEN_ACTION_MODULE_ADDRESS,
+    },
+  };
+
+  let res = await client.query({
+    query: GenerateModuleCurrencyApprovalData,
+    variables: {
+      request: request,
+    },
+    context: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+
+  console.log(res?.data?.generateModuleCurrencyApprovalData);
+  return res?.data?.generateModuleCurrencyApprovalData;
+};
 
 /* helper functions */
 function getSigner() {
